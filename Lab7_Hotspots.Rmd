@@ -3,7 +3,7 @@ title: "Lab 7 Hotspots"
 author: "Sara Orofino"
 date: "5/22/2019"
 output:
-
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
