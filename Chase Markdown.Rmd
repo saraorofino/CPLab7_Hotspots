@@ -1,0 +1,133 @@
+---
+title: "Chase Markdown"
+author: "Chase Brewster"
+date: "5/22/2019"
+output: html_document
+---
+
+1. Set Up
+
+```{r setup, include=FALSE}
+library(raster)
+library(rgdal)
+library(rasterVis)
+library(maps)
+library(rgeos)
+library(dplyr)
+library(RColorBrewer)
+```
+
+2. Read in and Explore Data
+
+```{r}
+
+# rainbow color scheme
+cols = rev(colorRampPalette(brewer.pal(11, 'Spectral'))(255))
+
+# smaller plotting margins
+par(mar=c(2,2,1,1))
+
+# use "getwd()" in console - this tells you the working directory. Added in the threats_data/full_modelnv.tif to read in the specific data we needed from the threats folder
+
+all_threats <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/Threats_data/full_modelnv.tif")
+
+# plotting the raster really quick
+
+plot(all_threats, col=cols)
+
+# now add a basemap too
+# add=T adds the basemap to the original plot, fill=T fills the map (with color gray)
+
+plot(all_threats, ext=extent(-130,-110,24,50),col=cols)
+map('world', fill=T, add=T,col='gray')
+
+
+```
+
+```{r}
+# if you type in the raster name into the console, you can see raster information such as dimensions, total pixels, extent, resolution, etc.
+
+# Now, going to zoom in to the santa barbara channel
+
+plot(all_threats,col=cols, ext=extent(-121,-117,32,35), main="Cumulative Threats")
+map('world', fill=T, add=T,col='gray')
+
+# also, you can use zoom() function where you draw your own extent, but it doesn't work in markdown (HTML)
+
+# going to zoom in on SF bay
+
+plot(all_threats,col=cols, ext=extent(-123,-121,37,38.5), main="SF Bay")
+map('world', fill=T, add=T,col='gray')
+
+```
+
+```{r}
+# lets call our raster and get some information
+
+all_threats
+
+# try making a histogram to visualize some data
+
+hist(all_threats,main="Cumulative Threats Frequency")
+
+# cellStats() runs basic stats, super useful - ?cellStats
+
+cellStats(all_threats,mean)
+cellStats(all_threats,sd)
+
+```
+
+3. Raster Calculations
+
+```{r}
+# need to read in data. already have threats, need species
+
+all_spp <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/ca_curr_sp_rich.tif")
+
+# look at it 
+
+all_spp
+
+# data appears to be much coarser, and with a different extent
+
+plot(all_spp,col=cols)
+map('world', fill=T, add=T,col='gray')
+
+# lets crop and resample to make these rasters the same extents and resolutions
+
+# the threats raster has a larger extent, so we are going to make the threats layer match the species layer
+
+threats_crop <- crop(all_threats, all_spp)
+
+# now they are the same extent, and we need to resample to make them the same resolution
+# the threats is at a higher resolution, so we need to make the species resolution match this
+# we will use nearest neighbor (method = )
+# progress = text will tell us how things are going as it runs
+
+spp_res <- resample(all_spp, threats_crop, method='ngb', progress = 'text')
+
+# now we need to check if they actually line up after our resampling and cropping
+# for this we will use the stack() function to make a RasterStack
+
+spp_threat_stack <- stack(threats_crop, spp_res)
+plot(spp_threat_stack, col=cols)
+
+# looks good. these wouldn't stack if our crop and resample didn't work (would give an error)
+```
+
+```{r}
+
+# we want to find the top 20% of both species richness and threats, and combine them to find hotspots
+# we will use reclassify()
+
+# lets start with the species layer
+
+hist(spp_res, main="Species Raster Values")
+
+# there are a lot of zero values and we need to reassign them as they should be no data (NA) and not 0's
+
+# we are overwriting the higher resolution species raster - usually it would be better to make a new object
+
+spp_res <- reclassify(spp_res,rcl=c(-Inf,0,NA))
+```
+
