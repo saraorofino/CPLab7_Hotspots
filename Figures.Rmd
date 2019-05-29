@@ -1,0 +1,78 @@
+---
+title: "Explore"
+author: "Sara Orofino"
+date: "5/29/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###Packages:
+```{r, message=FALSE}
+# Load packages:
+
+library(raster)
+library(rgdal)
+library(rasterVis)
+library(maps)
+library(rgeos)
+library(dplyr)
+library(RColorBrewer)
+
+
+```
+
+
+###Explore - Your Turn  
+
+Remember the following steps:  
+ - Import Data  
+ - Crop, Resample, Reclassify  
+ - Create binary raster based on the top 20%    
+ - Find the top 20%  
+ - Overlay and plot hotspots  
+ 
+Choose a set of threat layers - Climate Threats (ocean acidification, sea temperature change, UV change)  
+
+```{r}
+#### Read in new threat layers:  
+
+threat_nutrient <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_nutrients.tif")
+threat_sed_dec <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_sed_decrease.tif")
+threat_sed_inc <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_sed_increase.tif")
+threat_pol_org <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_organic.tif")
+threat_pol_inorg <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_inorganic.tif")
+threat_pol_light <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_light_pol.tif")
+
+
+threat_stack <- stack(threat_nutrient, threat_sed_dec, threat_sed_inc, threat_pol_org, threat_pol_inorg, threat_pol_light)
+#plot(threat_stack, col=cols)
+
+
+##### Crop threats, resample species, reclassify species to the top 20%: 
+# Use the all_spp reclassified layer
+all_spp <- reclassify(all_spp, rcl=c(-Inf, 0, NA))
+
+# Crop the threats to the species layer to get the same extent: 
+cum_threats_crop <- crop(threat_stack, all_spp)
+
+# Resample the species to be the same resolution as the threats:  
+all_spp_res <- resample(all_spp, cum_threats_crop, method = 'ngb', progress = 'text')
+
+# Use stack() to create a RasterStack object - checks that the layers will line up decently 
+combine_stack <- stack(cum_threats_crop, all_spp_res)
+plot(combine_stack, col=cols)
+
+
+##### Add threat layers together
+cumulative <- overlay(threat_stack, fun=sum)
+
+# Check and see that it worked
+plot(cumulative, col=cols)
+
+#### Try mapping with species all in one and with the top 20% of species richness
+
+```
