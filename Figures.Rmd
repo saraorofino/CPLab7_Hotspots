@@ -1,0 +1,158 @@
+---
+title: "Explore"
+author: "Sara Orofino"
+date: "5/29/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###Packages:
+```{r, message=FALSE}
+# Load packages:
+
+library(raster)
+library(rgdal)
+library(rasterVis)
+library(maps)
+library(rgeos)
+library(dplyr)
+library(RColorBrewer)
+library(tmap)
+
+
+```
+
+
+###Explore - Your Turn  
+
+Remember the following steps:  
+ - Import Data  
+ - Crop, Resample, Reclassify  
+ - Create binary raster based on the top 20%    
+ - Find the top 20%  
+ - Overlay and plot hotspots  
+ 
+Choose a set of threat layers - Pollution Threats (nutrients, sediment increase/decrease, light, organic, inorganic)    
+
+```{r}
+# Set colors for mapping:
+cols = rev(colorRampPalette(brewer.pal(11, 'Spectral'))(255))
+
+#### Read in new threat layers:  
+
+threat_nutrient <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_nutrients.tif")
+threat_sed_dec <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_sed_decrease.tif")
+threat_sed_inc <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_sed_increase.tif")
+threat_pol_org <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_organic.tif")
+threat_pol_inorg <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_inorganic.tif")
+threat_pol_light <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/Threats_data/impact_light_pol.tif")
+all_spp <- raster("/Users/saraorofino/Documents/GitHub/CPLab7_Hotspots/ca_curr_sp_rich.tif")
+
+threat_stack <- stack(threat_nutrient, threat_sed_dec, threat_sed_inc, threat_pol_org, threat_pol_inorg, threat_pol_light)
+#plot(threat_stack, col=cols)
+
+
+##### Crop threats, resample species, reclassify species to the top 20%: 
+# Use the all_spp reclassified layer
+all_spp <- reclassify(all_spp, rcl=c(-Inf, 0, NA))
+
+# Crop the threats to the species layer to get the same extent and make sure no negatives: 
+cum_threats_crop <- crop(threat_stack, all_spp)
+cum_threats <- reclassify(cum_threats_crop, rcl=c(-Inf, 0, NA))
+
+# Resample the species to be the same resolution as the threats:  
+all_spp_res <- resample(all_spp, cum_threats_crop, method = 'ngb', progress = 'text')
+
+# Use stack() to create a RasterStack object - checks that the layers will line up decently 
+combine_stack <- stack(cum_threats_crop, all_spp_res)
+plot(combine_stack, col=cols)
+
+
+##### Add threat layers together
+cumulative <- overlay(cum_threats, fun=sum)
+
+# Check and see that it worked
+plot(cumulative, col=cols)
+
+# Find the top 20% of species biodiversity
+spp_cutoff <- quantile(all_spp_res, 0.80)
+spp_maxVal <- cellStats(all_spp_res, max)
+
+rcl_mat <- c(-Inf, spp_cutoff, 0,
+             spp_cutoff, spp_maxVal,1)
+
+# Reclassify the species layer 
+spp_binary <- reclassify(all_spp_res, rcl = rcl_mat)
+
+#### Try mapping with the top 20% of species richness
+hotspot_20 <- overlay(spp_binary, cumulative, fun=function(x,y){x+y})
+
+plot(hotspot_20)
+map('world', fill=T, add=T, col='gray80')
+
+#### Try mapping with all of species richness...
+
+hotspot_all <- overlay(all_spp_res, cumulative, fun=sum)
+
+plot(hotspot_all)
+map('world', fill=T, add=T, col='gray80')
+
+```
+
+Try mapping the outcomes 
+
+
+```{r}
+####### Layered map of all biodiversity and summed threats
+
+threat_cols = brewer.pal(6, 'YlOrRd')
+spp_cols = brewer.pal(7, 'Greens')
+
+plot(cumulative, col=threat_cols)
+map('world', fill=T, add=T, col='gray80')
+
+tmap_mode("plot")
+
+map_all <- tm_shape(all_spp_res) + 
+  tm_raster(title = "Species Richness", palette = spp_cols, style = 'cont') +
+  tm_style("gray") + 
+  tm_layout(legend.position = c("right", "top"),
+            legend.text.color = "black",
+            legend.text.size = 0.5) + 
+  tm_basemap(server = "OpenStreetMap") +
+  tm_shape(cumulative) +
+  tm_raster(title = "Cumulative Pollution Threats", palette = threat_cols, style = 'cont') + 
+  tm_layout(legend.position = c("left", "bottom"),
+            legend.text.color = "black",
+            legend.text.size = 0.5) 
+
+map_all
+
+
+
+##### Layered map of top 20% of species biodiversity and cumulative threats
+hotspot_cols <- c("white", "lightblue", "firebrick")
+
+map_20 <- tm_shape(spp_binary) + 
+  tm_raster(title = "Top 20% Species Richness", palette = hotspot_cols) +
+  tm_style("gray") + 
+  tm_layout(legend.position = c("left", "bottom"),
+            legend.text.color = "black",
+            legend.text.size = 0.5) + 
+  tm_basemap(server = "OpenStreetMap") +
+  tm_shape(cumulative) +
+  tm_raster(title = "Cumulative Pollution Threats", palette = threat_cols, style = 'cont') 
+
+map_20
+
+# need to fix the coloring of the binary species - showing up as a continous gradient
+```
+
+
+
+
+
