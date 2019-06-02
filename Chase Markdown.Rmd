@@ -129,5 +129,96 @@ hist(spp_res, main="Species Raster Values")
 # we are overwriting the higher resolution species raster - usually it would be better to make a new object
 
 spp_res <- reclassify(spp_res,rcl=c(-Inf,0,NA))
+hist(spp_res,main="Species Raster Values, No Zeroes")
+```
+
+```{r}
+# so, the zeros are now NA
+
+# now, we just want the top 20% of species
+# these cells will have a value of 1, and all other non-NA cells will be 0
+
+# to figure out the quantiles, we can use the quantile() function
+
+spp_cutoff <- quantile(spp_res,0.8) # this will find the exact value at the 80th percentile
+spp_maxVal <- cellStats(spp_res,max) # this is the maximumn in the speciues data
+
+# now, we have the cutoff and the maximum
+# so we will use the reclassify function to reassign "0" and "1"'s 
+# this is a reclassification matrix
+
+rcl_mat <- c(-Inf,spp_cutoff,0,spp_cutoff,spp_maxVal,1) 
+
+# basically, everything up to the cutoff is 0, and the cutoff to the max is 1
+
+# now, reclassify using the matrix
+
+spp_binary <- reclassify(spp_res, rcl=rcl_mat)
+
+# now we have a binary dataset = either, a cell is top 20, or it is not
+
+# let's visualize
+# need to change the colors
+
+binary_cols <- c("white","firebrick")
+
+# now, baseplot with R, giving it the color scheme, and adding a basemap below
+
+plot(spp_binary,col=binary_cols,legend=F,main="Top 20% of Species Richness")
+map('world', fill=T,add=T,col="gray")
+```
+
+```{r}
+# Now that we have the top 20% of species, we need to do the same thing to get the threats layer
+
+# visualize the data
+# not a lot of zeroes - probably don't need to change them to NA
+
+hist(threats_crop, main="Threats Raster Values")
+
+# now lets find quantiles and resample
+
+threat_cutoff <- quantile(threats_crop,0.8)
+threat_maxVal <- cellStats(threats_crop,max)
+
+# now we need the reclassify matrix
+
+rcl_mat_two <- c(-Inf,threat_cutoff,0,threat_cutoff,spp_maxVal,1) 
+
+# now reclassify
+
+threat_binary <- reclassify(threats_crop, rcl=rcl_mat_two)
+
+# now we have a binary dataset = either, a cell is top 20, or it is not
+
+# let's visualize
+# need to change the colors
+
+binary_cols <- c("white","firebrick")
+
+# now, baseplot with R, giving it the color scheme, and adding a basemap below
+
+plot(threat_binary,col=binary_cols,legend=F,main="Top 20% of Threats")
+map('world', fill=T,add=T,col="gray")
+```
+
+```{r}
+# now we have our top 20% of threats and species
+# so let us combine them for overlap
+
+# overlay function
+
+hotspots <- overlay(spp_binary, threat_binary,fun=function(x,y){x+y})
+
+# so now, cells can have a value of 0,1, or 2
+# so lets get new colors
+
+brks_hotspots <- seq(0,3,length.out=4)
+hotspot_cols <- c("white", "lightblue", "firebrick")
+
+# okay lets plot them
+
+plot(hotspots,col=hotspot_cols,legend=F,main="Hotspots")
+map('world',fill=T,add=T,col='gray80')
 ```
 

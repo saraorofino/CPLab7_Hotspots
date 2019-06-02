@@ -1,0 +1,61 @@
+---
+title: "Pollution Threats Chase"
+author: "Chase Brewster"
+date: "5/29/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# packages
+
+library(raster)
+library(rgdal)
+library(rasterVis)
+library(maps)
+library(rgeos)
+library(dplyr)
+library(RColorBrewer)
+
+```
+
+```{r}
+
+# read in data
+
+# threats
+
+nutrients <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/Threats_data/impact_nutrients.tif") # nutrient pollution
+sed_dec <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/Threats_data/impact_sed_decrease.tif") # decrease sediment
+sed_inc <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/Threats_data/impact_sed_increase.tif") # increase sediment
+organic <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/Threats_data/impact_organic.tif") # organic pollution
+inorganic <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/Threats_data/impact_inorganic.tif") # inorganic pollution
+light <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/Threats_data/impact_light_pol.tif") # light pollution
+
+# species
+
+species <- raster("/Users/chasebrewster/Documents/Bren/Spring 2019/ESM 270/Lab 7/CPLab7_Hotspots/ca_curr_sp_rich.tif")
+```
+
+```{r}
+# rainbow color scheme
+
+cols = rev(colorRampPalette(brewer.pal(11, 'Spectral'))(255))
+
+# plot em
+
+plot(nutrients, col=cols)
+
+plot(nutrients,col=cols, ext=extent(-121,-117,32,35))
+map('world', fill=T, add=T,col='gray')
+
+plot(sed_dec,col=cols, ext=extent(-121,-117,32,35))
+map('world', fill=T, add=T,col='gray')
+
+plot(sed_inc,col=cols, ext=extent(-121,-117,32,35))
+map('world', fill=T, add=T,col='gray')
+
+
+```
+
