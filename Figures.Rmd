@@ -22,6 +22,7 @@ library(rgeos)
 library(dplyr)
 library(RColorBrewer)
 library(tmap)
+library(colorspace)
 
 
 ```
@@ -91,14 +92,14 @@ spp_binary <- reclassify(all_spp_res, rcl = rcl_mat)
 #### Try mapping with the top 20% of species richness
 hotspot_20 <- overlay(spp_binary, cumulative, fun=function(x,y){x+y})
 
-plot(hotspot_20)
+plot(hotspot_20, ext=extent(-121,-117,32,35))
 map('world', fill=T, add=T, col='gray80')
 
 #### Try mapping with all of species richness...
 
 hotspot_all <- overlay(all_spp_res, cumulative, fun=sum)
 
-plot(hotspot_all)
+plot(hotspot_all, ext=extent(-121,-117,32,35))
 map('world', fill=T, add=T, col='gray80')
 
 ```
@@ -111,8 +112,10 @@ Try mapping the outcomes
 
 threat_cols = brewer.pal(6, 'YlOrRd')
 spp_cols = brewer.pal(7, 'Greens')
+hotspot_cols <- c("white", "lightblue", "slategray1")
 
-plot(cumulative, col=threat_cols)
+plot(spp_binary, col=hotspot_cols, ext=extent(-121,-117,32,35), legend=F)
+plot(cumulative, col=threat_cols, ext=extent(-121,-117,32,35), add=T)
 map('world', fill=T, add=T, col='gray80')
 
 tmap_mode("plot")
@@ -135,7 +138,7 @@ map_all
 
 
 ##### Layered map of top 20% of species biodiversity and cumulative threats
-hotspot_cols <- c("white", "lightblue", "firebrick")
+
 
 map_20 <- tm_shape(spp_binary) + 
   tm_raster(title = "Top 20% Species Richness", palette = hotspot_cols) +
@@ -153,6 +156,23 @@ map_20
 ```
 
 
+Actual final figure:  
+
+```{r}
+# Color Gradient:
+threat_col = colorRampPalette(brewer.pal(5, 'YlOrRd'))
+
+# Base R plot of the hotspots:  
+
+plot(hotspot_20, ext=extent(-121,-117,32,35), axes=FALSE, legend=F, col=threat_col(5),
+     main = "Southern California Pollution Threats")
+legend("bottomleft", legend = c("Least Pollution", "", "", "", "Most Pollution"),
+       horiz = F, bty = "n", fill = threat_cols(5), title = "Cumulative Pollution Threats", cex = 0.8)
+map('world', fill=T, add=T, col='gray80')
+
+
+
+```
 
 
 
